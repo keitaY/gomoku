@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.zero.star.sample.websocket"
+    package="com.nazunasoft.gomoku"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -13,7 +13,7 @@
         android:label="@string/app_name" >
         <activity
             android:label="@string/app_name"
-            android:name=".MainActivity" >
+            android:name="com.nazunasoft.gomoku.MainActivity" >
             <intent-filter >
                 <action android:name="android.intent.action.MAIN" />
 
