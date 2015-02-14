@@ -1,6 +1,8 @@
 package com.nazunasoft.gomoku;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.NotYetConnectedException;
 
 import org.andengine.audio.sound.Sound;
@@ -21,11 +23,21 @@ import org.andengine.util.HorizontalAlign;
 import org.andengine.util.color.Color;
 import org.andengine.opengl.texture.atlas.bitmap.BitmapTextureAtlas;
 import org.andengine.opengl.texture.region.TextureRegion;
+import org.java_websocket.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.graphics.Typeface;
+import android.os.Handler;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.widget.Toast;
+
+
 
 public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
+    private static final String TAG = "MainScene";
 	Sprite[] goishi = new Sprite[200];
 	Sprite goban;
 	Sprite pregoishi;
@@ -37,7 +49,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	int step=0;
 	int[][] field = new int[25][25];//noStone=0,black=1,white=2
 	int get=0;
-	
+	int connectionID;
+    static public WebSocketClient mClient;
 	public MainScene(MultiSceneActivity baseActivity){
 		super(baseActivity);
 		init();
@@ -46,6 +59,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	public void init(){
 		step=0;
 		get=0;
+        connectToServer();
 		prepareGraphics();
 		setOnSceneTouchListener(this);
 		//-------------------
@@ -58,17 +72,14 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		float y = pSceneTouchEvent.getY();
 	    switch (pSceneTouchEvent.getAction()) {
 	    case TouchEvent.ACTION_DOWN:
-	        //Log.d("TouchEvent", "getAction()" + "ACTION_DOWN");
 	    	preStone(x,y);
 	        break;
 	    case TouchEvent.ACTION_UP:
 	    	if(pregoishi.hasParent()){pregoishi.detachSelf();}
 	    	solveGrid(x,y);
-	        //Log.d("TouchEvent", "getAction()" + "ACTION_UP");
 	        break;
 	    case TouchEvent.ACTION_MOVE:
 			if(pregoishi.hasParent()){pregoishi.detachSelf();}
-	        //Log.d("TouchEvent", "getAction()" + "ACTION_MOVE");
 	    	preStone(x,y);
 	        break;
 	    case TouchEvent.ACTION_CANCEL:
@@ -100,18 +111,53 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		Log.d("grid", "[" + gx+","+gy+"]");
 		if(gx>=0&&gy>=0&&gx<=12&&gy<=12&&field[gx][gy]==0){
 			setStone(gx,gy,sentegote);
-			try {
-				MainActivity.mClient.send("["+gx+":"+gy+"]");
-			} catch (NotYetConnectedException e) {
-				// TODO 自動生成された catch ブロック
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				// TODO 自動生成された catch ブロック
-				e.printStackTrace();
+			sendStone(gx,gy);
+		}
+	}
+	//----------------------------------------------------------send&receive
+	public void sendStone(int gx, int gy){
+		JSONObject data = new JSONObject();
+		try {
+			data.put("bw", sentegote);
+			data.put("gx", gx);
+			data.put("gy", gy);
+			data.put("id", connectionID);
+		} catch (JSONException e1) {
+			// TODO 自動生成された catch ブロック
+			e1.printStackTrace();
+		}
+		
+		try {
+			mClient.send(data.toString());
+		} catch (NotYetConnectedException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
+		}	
+	}
+	public void parseJson(String data){
+        try {
+			JSONObject jsonObject = new JSONObject(data);
+			int gx = jsonObject.getInt("gx");
+			int gy = jsonObject.getInt("gy");
+			int bw = jsonObject.getInt("bw");
+			int id = jsonObject.getInt("id");
+			if(bw>=0&&id!=connectionID){
+			setStone(gx,gy,bw);
+			}else{
+			connectionID = id;
+			sentegote = connectionID%2;
 			}
+		} catch (JSONException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
 		}
 	}
 	
+	//----------------------------------------------------------------UX
+
 	public void preStone(float x,float y){
 		int gx = (int)((x-Gpad)/Ggridlen);
 		int gy = (int)((y-Gpad-GshiftY)/Ggridlen);
@@ -141,7 +187,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		stoneHasamu(gx,gy);
 		if(checkGame(gx,gy)==1){
 			try {
-			MainActivity.mClient.send("uwaa");
+				mClient.send("uwaa");
 		} catch (NotYetConnectedException e) {
 			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
@@ -150,8 +196,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			e.printStackTrace();
 		}}
 		step++;
-		if(sentegote==0){sentegote=1;
-		}else if(sentegote==1){sentegote=0;}
+		//if(sentegote==0){sentegote=1;
+		//}else if(sentegote==1){sentegote=0;}
 		goishisnd.play();
 	}
 	
@@ -164,6 +210,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		get++;
 	}
 	
+	
+	//---------------------------------------------------------------gameAlgo
 	public int checkGame(int gx, int gy){//find 5-lined stones
 		int i=0;
 		int count=0;
@@ -263,6 +311,47 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			e.printStackTrace();
 		}
 	}
+	
+
+	//-----------------------------------------------------------connection
+	public void connectToServer(){
+		
+	        try {
+	            URI uri = new URI(Constants.URI);
+	            mClient = new WebSocketClient(uri) {
+	                @Override
+	                public void onOpen(ServerHandshake handshake) {
+	                    Log.d(TAG, "onOpen");
+	                }
+	                @Override
+	                public void onMessage(final String message) {
+	                    Log.d(TAG, "Message:" + message);
+	                    parseJson(message);
+	                    MainActivity.mHandler.post(new Runnable() {
+	                        @Override
+	                        public void run() {
+	                            Toast.makeText(getBaseActivity(), message, Toast.LENGTH_SHORT).show();
+	                        }
+	                    });
+	                }
+	                @Override
+	                public void onError(Exception ex) {
+	                    Log.d(TAG, "onError");
+	                    ex.printStackTrace();
+	                }
+	                @Override
+	                public void onClose(int code, String reason, boolean remote) {
+	                    Log.d(TAG, "onClose");
+	                }
+	            };
+	            mClient.connect();
+	        } catch (URISyntaxException e) {
+	            e.printStackTrace();
+	        }
+
+		
+	}
+	
 	
 	
 

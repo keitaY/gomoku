@@ -7,7 +7,7 @@ import android.view.KeyEvent;
 
 public abstract class KeyListenScene extends Scene {
 	
-	private MultiSceneActivity baseActivity;
+	private static MultiSceneActivity baseActivity;
 
 	// コンストラクタ
 	public KeyListenScene(MultiSceneActivity baseActivity) {
@@ -16,7 +16,7 @@ public abstract class KeyListenScene extends Scene {
 		prepareSoundAndMusic();
 	}
 
-	public MultiSceneActivity getBaseActivity() {
+	public static MultiSceneActivity getBaseActivity() {
 		return baseActivity;
 	}
 

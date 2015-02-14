@@ -13,6 +13,9 @@ import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
 import org.andengine.entity.scene.Scene;
 import org.java_websocket.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import com.nazunasoft.gomoku.R;
 
@@ -30,8 +33,7 @@ import android.widget.Toast;
 
 public class MainActivity extends MultiSceneActivity {
     private static final String TAG = "MainActivity";
-    private Handler mHandler;
-    static public WebSocketClient mClient;
+    static Handler mHandler;
 	private int CAMERA_WIDTH = 480;
 	private int CAMERA_HEIGHT = 800;
 	static SharedPreferences sp ;
@@ -44,8 +46,7 @@ public class MainActivity extends MultiSceneActivity {
 		eo.getAudioOptions().setNeedsSound(true);
 		eo.getAudioOptions().setNeedsMusic(true);
 		
-        connectToServer();
-		
+		   mHandler = new Handler();
 		return eo;
 	}
 	
@@ -63,44 +64,7 @@ public class MainActivity extends MultiSceneActivity {
 		return mainScene;
 	}
 
-	public void connectToServer(){
-		
-		   mHandler = new Handler();
-	        try {
-	            URI uri = new URI(Constants.URI);
-	            mClient = new WebSocketClient(uri) {
-	                @Override
-	                public void onOpen(ServerHandshake handshake) {
-	                    Log.d(TAG, "onOpen");
-	                }
-	                @Override
-	                public void onMessage(final String message) {
-	                    Log.d(TAG, "onMessage");
-	                    Log.d(TAG, "Message:" + message);
-	                    mHandler.post(new Runnable() {
-	                        @Override
-	                        public void run() {
-	                            Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-	                        }
-	                    });
-	                }
-	                @Override
-	                public void onError(Exception ex) {
-	                    Log.d(TAG, "onError");
-	                    ex.printStackTrace();
-	                }
-	                @Override
-	                public void onClose(int code, String reason, boolean remote) {
-	                    Log.d(TAG, "onClose");
-	                }
-	            };
-	            mClient.connect();
-	        } catch (URISyntaxException e) {
-	            e.printStackTrace();
-	        }
-
-		
-	}
+	
 	@Override
 	protected int getLayoutID() {
 		// ActivityのレイアウトのIDを返す
