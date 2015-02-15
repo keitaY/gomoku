@@ -7,6 +7,8 @@ import java.nio.channels.NotYetConnectedException;
 
 import org.andengine.audio.sound.Sound;
 import org.andengine.audio.sound.SoundFactory;
+import org.andengine.engine.handler.timer.ITimerCallback;
+import org.andengine.engine.handler.timer.TimerHandler;
 import org.andengine.entity.modifier.FadeInModifier;
 import org.andengine.entity.modifier.MoveXModifier;
 import org.andengine.entity.modifier.MoveYModifier;
@@ -28,6 +30,9 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Handler;
 import android.util.Log;
@@ -38,38 +43,68 @@ import android.widget.Toast;
 
 public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
     private static final String TAG = "MainScene";
-	Sprite[] goishi = new Sprite[200];
+	Sprite[] goishi = new Sprite[300];
 	Sprite goban;
 	Sprite pregoishi;
+	Sprite gauge;
+	Sprite backgauge;
+	Sprite back;
 	private Sound goishisnd;
+	private Sound ishitorusnd;
+	private Sound startsnd;
+	static int FIELD=11;
+	static int TIME=600;
 	static int GshiftY = 200;
-	static int Gpad=30;
-	static int Ggridlen=35;
-	int sentegote=0;//sente(black)=0 gote(white)=1
+	static int Gpad=40;
+	static int Ggridlen=40;
+	int Mybw=0;//sente(black)=0 gote(white)=1
 	int step=0;
-	int[][] field = new int[25][25];//noStone=0,black=1,white=2
-	int get=0;
+	int[][] field = new int[FIELD*3][FIELD*3];//noStone=0,black=1,white=2
+	int getStone=0;
+	int torareStone=0;
 	int connectionID;
+	int isWait=2;
+	int wt=0;
+	int touchEnable;
+	int timerCounter;
+	int isGamed=0;
+	private Text stateText;
+	private Text timerText;
+	private Text ishiText;
+	private Text gameText;
+	
     static public WebSocketClient mClient;
 	public MainScene(MultiSceneActivity baseActivity){
 		super(baseActivity);
 		init();
+		registerUpdateHandler(updateHandler);
 	}
 	
 	public void init(){
+		isGamed=0;
+		goishi = new Sprite[200];
+		field = new int[FIELD*3][FIELD*3];
+		timerCounter=TIME;
 		step=0;
-		get=0;
+		getStone=0;
+		torareStone=0;
+		touchEnable=0;
+		wt=0;
+		isWait=2;
+		//--------------------
         connectToServer();
-		prepareGraphics();
 		setOnSceneTouchListener(this);
 		//-------------------
+		prepareGraphics();
 		setBackground();
+		prepareText();
 	}
 	
 	@Override
 	public boolean onSceneTouchEvent(Scene pScene, TouchEvent pSceneTouchEvent) {
 		float x = pSceneTouchEvent.getX();
 		float y = pSceneTouchEvent.getY();
+		if(touchEnable==1){
 	    switch (pSceneTouchEvent.getAction()) {
 	    case TouchEvent.ACTION_DOWN:
 	    	preStone(x,y);
@@ -86,6 +121,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	        Log.d("TouchEvent", "getAction()" + "ACTION_CANCEL");
 	        break;
 	    }
+		}
 		
 		return true;
 	}
@@ -94,31 +130,115 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	public boolean dispatchKeyEvent(KeyEvent e) {
 		return false;
 	}
+	
+	//----------------------------------------------------------prepareassets
 
 	public void prepareGraphics() {
+		 back =  getBaseActivity().getResourceUtil().getSprite("back.jpg");
+		 back.setZIndex(-3);
 		 goban =  getBaseActivity().getResourceUtil().getSprite("goban.jpg");
-		 goban.setZIndex(-1);
+		 goban.setZIndex(-2);
+		 gauge = getBaseActivity().getResourceUtil().getSprite("gauge1.png");
+		 gauge.setZIndex(0);
+		 backgauge = getBaseActivity().getResourceUtil().getSprite("gauge1.png");
+		 backgauge.setAlpha(0.5f);
+		 backgauge.setZIndex(-1);
 	}
 	
 	public void setBackground(){
+		back.setPosition(0,0);
+		attachChild(back);
 		goban.setPosition(0,GshiftY);
 		attachChild(goban);
+		backgauge.setPosition(0,GshiftY+goban.getHeight()+35);
+		attachChild(backgauge);
+		gauge.setPosition(0,GshiftY+goban.getHeight()+35);
+		attachChild(gauge);
 	}
+	
+	public void prepareText(){
+		Texture texture = new BitmapTextureAtlas(getBaseActivity().getTextureManager(), 480, 800,TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+		Typeface tegaki = Typeface.createFromAsset(getBaseActivity().getAssets(), "font/851tegaki.ttf");
+		Font blackfont = new Font(getBaseActivity().getFontManager(), texture, tegaki, 22, true, Color.BLACK);
+		getBaseActivity().getTextureManager().loadTexture(texture);
+		getBaseActivity().getFontManager().loadFont(blackfont);
+		stateText = new Text(30, 30, blackfont, "finding an opponent...", 50,
+				new TextOptions(HorizontalAlign.LEFT), getBaseActivity()
+						.getVertexBufferObjectManager());
+		stateText.setZIndex(2);
+		
+		ishiText = new Text(30, 60, blackfont, "got stones:0 stolen stones:0", 50,
+				new TextOptions(HorizontalAlign.LEFT), getBaseActivity()
+						.getVertexBufferObjectManager());
+		ishiText.setZIndex(2);
+		
+		gameText = new Text(30, 90, blackfont, "", 50,
+				new TextOptions(HorizontalAlign.LEFT), getBaseActivity()
+						.getVertexBufferObjectManager());
+		gameText.setZIndex(2);
+		
+		timerText = new Text(24, gauge.getY()-29, blackfont, "Timer Gauge", 50,
+				new TextOptions(HorizontalAlign.LEFT), getBaseActivity()
+						.getVertexBufferObjectManager());
+		timerText.setZIndex(2);
+
+		attachChild(ishiText);
+		attachChild(gameText);
+		attachChild(stateText);
+		attachChild(timerText);
+	}
+	
+	public void popupDialogue(final String message){
+        MainActivity.mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                new AlertDialog.Builder(getBaseActivity())
+                .setTitle(message)
+                .setMessage("Want to try again?")
+                .setPositiveButton(
+                  "Yes", 
+                  new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(
+                      DialogInterface dialog, int which) {  
+                    	init();
+                    }
+                  })
+                .setNegativeButton("No", null)
+                .show();
+            	
+            }
+        });
+	}
+	
+
+	@Override
+	public void prepareSoundAndMusic() {
+		try {
+			goishisnd = SoundFactory.createSoundFromAsset(getBaseActivity().getSoundManager(),getBaseActivity(),"utu.wav");
+			ishitorusnd = SoundFactory.createSoundFromAsset(getBaseActivity().getSoundManager(),getBaseActivity(),"ishitoru.wav");
+			startsnd = SoundFactory.createSoundFromAsset(getBaseActivity().getSoundManager(),getBaseActivity(),"start.wav");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	//-------------------------------------------------------------solveGrid
 	
 	public void solveGrid(float x, float y){
 		int gx = (int)((x-Gpad)/Ggridlen);
 		int gy = (int)((y-Gpad-GshiftY)/Ggridlen);
 		Log.d("grid", "[" + gx+","+gy+"]");
 		if(gx>=0&&gy>=0&&gx<=12&&gy<=12&&field[gx][gy]==0){
-			setStone(gx,gy,sentegote);
 			sendStone(gx,gy);
+			setStone(gx,gy,Mybw);
 		}
 	}
 	//----------------------------------------------------------send&receive
 	public void sendStone(int gx, int gy){
 		JSONObject data = new JSONObject();
 		try {
-			data.put("bw", sentegote);
+			data.put("bw", Mybw);
 			data.put("gx", gx);
 			data.put("gy", gy);
 			data.put("id", connectionID);
@@ -144,11 +264,31 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			int gy = jsonObject.getInt("gy");
 			int bw = jsonObject.getInt("bw");
 			int id = jsonObject.getInt("id");
-			if(bw>=0&&id!=connectionID){
-			setStone(gx,gy,bw);
-			}else{
-			connectionID = id;
-			sentegote = connectionID%2;
+			if(bw!=-1&&id!=connectionID&&id!=-1&&gx!=-2){
+				setStone(gx,gy,bw);
+				timerCounter=TIME;
+			}else if(bw==-1){//OnConnect
+				connectionID = id;
+	            MainActivity.mHandler.post(new Runnable() {
+	                @Override
+	                public void run() {
+	                	Toast.makeText(getBaseActivity(), "Got Connection. Please wait...", Toast.LENGTH_SHORT).show();
+	                }
+	            });
+			}else if(id==-1){//OnStartGame
+				startsnd.play();
+				Mybw=bw;
+	            MainActivity.mHandler.post(new Runnable() {
+	                @Override
+	                public void run() {
+	                	Toast.makeText(getBaseActivity(), "Game Start !", Toast.LENGTH_SHORT).show();
+	                }
+	            });
+				if(Mybw==0){
+					touchEnable=1;isWait=1;}else{touchEnable=0;isWait=0;}
+			}else if(gx==-2&&id!=connectionID){//resigned
+				Game(Mybw);
+				if(gameText.getText()=="")gameText.setText("the opponent has disconnected.");
 			}
 		} catch (JSONException e) {
 			// TODO 自動生成された catch ブロック
@@ -161,10 +301,10 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	public void preStone(float x,float y){
 		int gx = (int)((x-Gpad)/Ggridlen);
 		int gy = (int)((y-Gpad-GshiftY)/Ggridlen);
-		if(gx>=0&&gy>=0&&gx<=12&&gy<=12&&field[gx][gy]==0){
-			if(sentegote==0){
+		if(gx>=0&&gy>=0&&gx<=FIELD-1&&gy<=FIELD-1&&field[gx][gy]==0){
+			if(Mybw==0){
 				 pregoishi=getBaseActivity().getResourceUtil().getSprite("black_s.png");
-				 }else if(sentegote==1){
+				 }else if(Mybw==1){
 				 pregoishi=getBaseActivity().getResourceUtil().getSprite("white_s.png");
 			}
 			pregoishi.setPosition((float)(Gpad+(gx-0.5)*Ggridlen),(float)(GshiftY+Gpad+(gy-0.5)*Ggridlen));
@@ -185,37 +325,93 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		attachChild(goishi[step]);
 		goishi[step].registerEntityModifier(new FadeInModifier(0.3f));
 		stoneHasamu(gx,gy);
+		if(bw!=Mybw){touchEnable=1;isWait=1;}else{touchEnable=0;isWait=0;}
 		if(checkGame(gx,gy)==1){
-			try {
-				mClient.send("uwaa");
-		} catch (NotYetConnectedException e) {
-			// TODO 自動生成された catch ブロック
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO 自動生成された catch ブロック
-			e.printStackTrace();
-		}}
+				Game(bw);
+				gameText.setText("5-stones!");
+				}
+		if(getStone==10||torareStone==10){
+				Game(bw);
+				gameText.setText("10-steels!");
+				}
 		step++;
-		//if(sentegote==0){sentegote=1;
-		//}else if(sentegote==1){sentegote=0;}
 		goishisnd.play();
 	}
 	
 	public void removeStone(int gx,int gy){
+		ishitorusnd.play();
+		Log.d("removest",""+gx+":"+gy);
+		if(field[gx][gy]==Mybw+1){
+			torareStone++;}else{getStone++;}
 		field[gx][gy]=0;
 		for(int i=0;i<step;i++){
-			if(goishi[i].getX()==(float)(Gpad+(gx-0.5)*Ggridlen)&&goishi[i].getY()==(float)(GshiftY+Gpad+(gy-0.5)*Ggridlen))
-			goishi[i].detachSelf();
+			if(goishi[i].getX()==(float)(Gpad+(gx-0.5)*Ggridlen)&&goishi[i].getY()==(float)(GshiftY+Gpad+(gy-0.5)*Ggridlen)){
+			if(goishi[i].hasParent()){goishi[i].detachSelf();}
+			}
 		}
-		get++;
+		Log.d("vest","aa");
+		ishiText.setText("got stones:"+getStone+" stolen stones:"+torareStone);
 	}
 	
 	
+	// --------------------------------------------------------------------timer
+	public TimerHandler updateHandler = new TimerHandler(1f / 60f, true,
+			new ITimerCallback() {
+				public void onTimePassed(TimerHandler pTimerHandler) {
+					if(isWait==1){
+					wt=0;
+					stateText.setText("your turn.");
+					if(timerCounter>=0){timerCounter--;}
+					if(timerCounter>=0){gauge.setWidth(480 * timerCounter/TIME);}
+					if(timerCounter==0){
+						if(Mybw==0){Game(1);
+						}else{Game(0);}
+						sendStone(-2,-2);
+						}
+					}else if(isWait==0){
+						wt++;
+						if(wt==1){stateText.setText("waiting the opponent's turn.");}	
+						if(wt==TIME/5){stateText.setText("waiting the opponent's turn...");}	
+						if(wt==2*TIME/5){stateText.setText("waiting the opponent's turn.....");}	
+						if(wt==3*TIME/5){stateText.setText("waiting the opponent's turn.......");}	
+						if(wt==4*TIME/5){stateText.setText("waiting the opponent's turn.........");}	
+					}
+				}		
+	});
+	
 	//---------------------------------------------------------------gameAlgo
+	public void Game(int bw){
+		if(isGamed==0){isGamed=1;
+		mClient.close();
+		if(bw==Mybw){//win
+            MainActivity.mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                	Toast.makeText(getBaseActivity(), "You Win", Toast.LENGTH_SHORT).show();
+                }
+            });
+    		stateText.setText(" YOU WIN !!!");
+    		popupDialogue(" YOU WIN !");
+		}else{//lose
+            MainActivity.mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                	Toast.makeText(getBaseActivity(), "You Lose", Toast.LENGTH_SHORT).show();
+                }
+            });
+    		stateText.setText(" YOU LOSE...");
+    		popupDialogue(" YOU LOSE...");
+		}
+		touchEnable=0;
+		timerCounter=0;
+		isWait=2;
+		}
+	}
+	
 	public int checkGame(int gx, int gy){//find 5-lined stones
 		int i=0;
 		int count=0;
-		for(i=0;i<12;i++){
+		for(i=0;i<FIELD-1;i++){
 			if(field[gx][i]!=0&&field[gx][i]==field[gx][i+1]){
 				count++;
 				if(count==4){
@@ -224,7 +420,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			}else{count=0;}
 		}
 		count=0;
-		for(i=0;i<12;i++){
+		for(i=0;i<FIELD-1;i++){
 			if(field[i][gy]!=0&&field[i][gy]==field[i+1][gy]){
 				count++;
 				if(count==4){
@@ -246,7 +442,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		}
 		count=0;
 		int maxdecross=gx-gy;
-		for(i=0;i<13;i++){
+		for(i=0;i<FIELD;i++){
 			if(maxdecross+i>=0){
 				if(field[maxdecross+i][i]!=0&&field[maxdecross+i][i]==field[maxdecross+i+1][i+1]){
 					count++;
@@ -303,15 +499,6 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		
 	}
 	
-	@Override
-	public void prepareSoundAndMusic() {
-		try {
-			goishisnd = SoundFactory.createSoundFromAsset(getBaseActivity().getSoundManager(),getBaseActivity(),"utu.wav");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
 
 	//-----------------------------------------------------------connection
 	public void connectToServer(){
@@ -351,8 +538,5 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 
 		
 	}
-	
-	
-	
 
 }
