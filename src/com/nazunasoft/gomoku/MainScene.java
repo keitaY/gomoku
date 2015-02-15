@@ -147,6 +147,12 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		 backgauge = getBaseActivity().getResourceUtil().getSprite("gauge1.png");
 		 backgauge.setAlpha(0.5f);
 		 backgauge.setZIndex(-1);
+		 
+		for(int i=0;i<300;i=i+2){
+				goishi[i]=getBaseActivity().getResourceUtil().getSprite("black_s.png");
+				goishi[i+1]=getBaseActivity().getResourceUtil().getSprite("white_s.png");
+		}
+		
 	}
 	
 	public void setBackground(){
@@ -168,22 +174,22 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		Font blackfont = new Font(getBaseActivity().getFontManager(), texture, tegaki, 22, true, Color.BLACK);
 		getBaseActivity().getTextureManager().loadTexture(texture);
 		getBaseActivity().getFontManager().loadFont(blackfont);
-		stateText = new Text(30, 30, blackfont, "finding an opponent...", 50,
+		stateText = new Text(30, 30, blackfont, "finding an opponent...", 100,
 				new TextOptions(HorizontalAlign.LEFT), getBaseActivity()
 						.getVertexBufferObjectManager());
 		stateText.setZIndex(2);
 		
-		ishiText = new Text(30, 60, blackfont, "got stones:0 stolen stones:0", 50,
+		ishiText = new Text(30, 60, blackfont, "got stones:0 stolen stones:0", 100,
 				new TextOptions(HorizontalAlign.LEFT), getBaseActivity()
 						.getVertexBufferObjectManager());
 		ishiText.setZIndex(2);
 		
-		gameText = new Text(30, 90, blackfont, "", 50,
+		gameText = new Text(30, 90, blackfont, "", 100,
 				new TextOptions(HorizontalAlign.LEFT), getBaseActivity()
 						.getVertexBufferObjectManager());
 		gameText.setZIndex(2);
 		
-		timerText = new Text(24, gauge.getY()-29, blackfont, "Timer Gauge", 50,
+		timerText = new Text(24, gauge.getY()-29, blackfont, "Timer Gauge", 100,
 				new TextOptions(HorizontalAlign.LEFT), getBaseActivity()
 						.getVertexBufferObjectManager());
 		timerText.setZIndex(2);
@@ -272,8 +278,11 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			int bw = jsonObject.getInt("bw");
 			int id = jsonObject.getInt("id");
 			if(bw!=-1&&id!=connectionID&&id!=-1&&gx!=-2){
+
+		        Log.d("debug", "4");
 				setStone(gx,gy,bw);
 				timerCounter=TIME;
+		        Log.d("debug", "4");
 			}
 			if(bw==-1){//OnConnect
 				connectionID = id;
@@ -284,6 +293,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	                }
 	            });
 			}
+	        Log.d("debug", "4");
 			if(id==-1){//OnStartGame
 				startsnd.play();
 				Mybw=bw;
@@ -293,17 +303,22 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	                	Toast.makeText(getBaseActivity(), "Game Start !", Toast.LENGTH_SHORT).show();
 	                }
 	            });
-				if(Mybw==0){
+				if(Mybw==0){//black is sente
 					touchEnable=1;isWait=1;}else{touchEnable=0;isWait=0;}
 			}
+	        Log.d("debug", "4");
 			if(gx==-2&&id!=connectionID){//resigned
 				Game(Mybw);
 				if(gameText.getText()=="")gameText.setText("the opponent has disconnected.");
 			}
+	        Log.d("debug", "4");
 		} catch (JSONException e) {
 			// TODO Ž©“®¶¬‚³‚ê‚½ catch ƒuƒƒbƒN
+	        Log.d("debug", "e");
 			e.printStackTrace();
 		}
+
+        Log.d("debug", "4");
 	}
 	
 	//----------------------------------------------------------------UX
@@ -324,11 +339,6 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	}
 	
 	public void setStone(int gx,int gy, int bw){
-		if(bw==0){
-		 goishi[step]=getBaseActivity().getResourceUtil().getSprite("black_s.png");
-		 }else if(bw==1){
-		 goishi[step]=getBaseActivity().getResourceUtil().getSprite("white_s.png");
-		 }
 		field[gx][gy]=(bw+1);
 		goishi[step].setZIndex(1);
 		goishi[step].setPosition((float)(Gpad+(gx-0.5)*Ggridlen),(float)(GshiftY+Gpad+(gy-0.5)*Ggridlen));
@@ -349,6 +359,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	}
 	
 	public void removeStone(int gx,int gy){
+		sleep(100);
 		ishitorusnd.play();
 		Log.d("removest",""+gx+":"+gy);
 		if(field[gx][gy]==Mybw+1){
@@ -356,10 +367,11 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		field[gx][gy]=0;
 		for(int i=0;i<step;i++){
 			if(goishi[i].getX()==(float)(Gpad+(gx-0.5)*Ggridlen)&&goishi[i].getY()==(float)(GshiftY+Gpad+(gy-0.5)*Ggridlen)){
-			if(goishi[i].hasParent()){goishi[i].detachSelf();}
+			if(goishi[i].hasParent()){
+						goishi[i].setVisible(false);
+				}
 			}
 		}
-		Log.d("vest","aa");
 		ishiText.setText("got stones:"+getStone+" stolen stones:"+torareStone);
 	}
 	
@@ -369,10 +381,15 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	public TimerHandler updateHandler = new TimerHandler(1f / 60f, true,
 			new ITimerCallback() {
 				public void onTimePassed(TimerHandler pTimerHandler) {
+
+			        Log.d("debug", "5");
 					if(isWait==1){
+
+				    Log.d("debug", "6");
 					wt=0;
 					stateText.setText("your turn.");
-					if(timerCounter>=0){timerCounter--;}
+			        Log.d("debug", "5");
+					if(timerCounter>0){timerCounter--;}
 					if(timerCounter>=0){gauge.setWidth(480 * timerCounter/TIME);}
 					if(timerCounter==0){
 						if(Mybw==0){Game(1);
@@ -380,6 +397,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 						sendStone(-2,-2);
 						}
 					}else if(isWait==0){
+				        Log.d("debug", "7");
 						bou.setRotation(wt*1.56f);
 						wt++;
 						if(wt==1){stateText.setText("waiting the opponent's turn.");}	
@@ -538,14 +556,6 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	                public void onMessage(final String message) {
 	                    Log.d(TAG, "Message:" + message);
 	                    parseJson(message);
-	                    /*
-	                    MainActivity.mHandler.post(new Runnable() {
-	                        @Override
-	                        public void run() {
-	                            Toast.makeText(getBaseActivity(), message, Toast.LENGTH_SHORT).show();
-	                        }
-	                    });
-	                    */
 	                }
 	                @Override
 	                public void onError(Exception ex) {
@@ -564,5 +574,14 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 
 		
 	}
+	
+	 public synchronized void sleep(long msec)
+	    {	
+	    	try
+	    	{
+	    		wait(msec);
+	    	}catch(InterruptedException e){}
+	    }
+
 
 }
