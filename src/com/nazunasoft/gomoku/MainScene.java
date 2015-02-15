@@ -49,9 +49,11 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	Sprite gauge;
 	Sprite backgauge;
 	Sprite back;
+	Sprite bou;
 	private Sound goishisnd;
 	private Sound ishitorusnd;
 	private Sound startsnd;
+	private Sound winsnd;
 	static int FIELD=11;
 	static int TIME=600;
 	static int GshiftY = 200;
@@ -59,7 +61,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	static int Ggridlen=40;
 	int Mybw=0;//sente(black)=0 gote(white)=1
 	int step=0;
-	int[][] field = new int[FIELD*3][FIELD*3];//noStone=0,black=1,white=2
+	int[][] field = new int[FIELD*9][FIELD*9];//noStone=0,black=1,white=2
 	int getStone=0;
 	int torareStone=0;
 	int connectionID;
@@ -82,8 +84,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	
 	public void init(){
 		isGamed=0;
-		goishi = new Sprite[200];
-		field = new int[FIELD*3][FIELD*3];
+		goishi = new Sprite[300];
+		field = new int[FIELD*9][FIELD*9];
 		timerCounter=TIME;
 		step=0;
 		getStone=0;
@@ -140,6 +142,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		 goban.setZIndex(-2);
 		 gauge = getBaseActivity().getResourceUtil().getSprite("gauge1.png");
 		 gauge.setZIndex(0);
+		 bou = getBaseActivity().getResourceUtil().getSprite("bou.png");
+		 bou.setZIndex(0);
 		 backgauge = getBaseActivity().getResourceUtil().getSprite("gauge1.png");
 		 backgauge.setAlpha(0.5f);
 		 backgauge.setZIndex(-1);
@@ -154,6 +158,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		attachChild(backgauge);
 		gauge.setPosition(0,GshiftY+goban.getHeight()+35);
 		attachChild(gauge);
+		bou.setPosition(400,147);
+		attachChild(bou);
 	}
 	
 	public void prepareText(){
@@ -218,6 +224,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			goishisnd = SoundFactory.createSoundFromAsset(getBaseActivity().getSoundManager(),getBaseActivity(),"utu.wav");
 			ishitorusnd = SoundFactory.createSoundFromAsset(getBaseActivity().getSoundManager(),getBaseActivity(),"ishitoru.wav");
 			startsnd = SoundFactory.createSoundFromAsset(getBaseActivity().getSoundManager(),getBaseActivity(),"start.wav");
+			winsnd = SoundFactory.createSoundFromAsset(getBaseActivity().getSoundManager(),getBaseActivity(),"win.mp3");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -267,7 +274,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			if(bw!=-1&&id!=connectionID&&id!=-1&&gx!=-2){
 				setStone(gx,gy,bw);
 				timerCounter=TIME;
-			}else if(bw==-1){//OnConnect
+			}
+			if(bw==-1){//OnConnect
 				connectionID = id;
 	            MainActivity.mHandler.post(new Runnable() {
 	                @Override
@@ -275,7 +283,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	                	Toast.makeText(getBaseActivity(), "Got Connection. Please wait...", Toast.LENGTH_SHORT).show();
 	                }
 	            });
-			}else if(id==-1){//OnStartGame
+			}
+			if(id==-1){//OnStartGame
 				startsnd.play();
 				Mybw=bw;
 	            MainActivity.mHandler.post(new Runnable() {
@@ -286,7 +295,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	            });
 				if(Mybw==0){
 					touchEnable=1;isWait=1;}else{touchEnable=0;isWait=0;}
-			}else if(gx==-2&&id!=connectionID){//resigned
+			}
+			if(gx==-2&&id!=connectionID){//resigned
 				Game(Mybw);
 				if(gameText.getText()=="")gameText.setText("the opponent has disconnected.");
 			}
@@ -325,6 +335,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		attachChild(goishi[step]);
 		goishi[step].registerEntityModifier(new FadeInModifier(0.3f));
 		stoneHasamu(gx,gy);
+		step++;
 		if(bw!=Mybw){touchEnable=1;isWait=1;}else{touchEnable=0;isWait=0;}
 		if(checkGame(gx,gy)==1){
 				Game(bw);
@@ -334,7 +345,6 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 				Game(bw);
 				gameText.setText("10-steels!");
 				}
-		step++;
 		goishisnd.play();
 	}
 	
@@ -355,6 +365,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	
 	
 	// --------------------------------------------------------------------timer
+	int rot;
 	public TimerHandler updateHandler = new TimerHandler(1f / 60f, true,
 			new ITimerCallback() {
 				public void onTimePassed(TimerHandler pTimerHandler) {
@@ -369,12 +380,16 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 						sendStone(-2,-2);
 						}
 					}else if(isWait==0){
+						bou.setRotation(wt*1.56f);
 						wt++;
 						if(wt==1){stateText.setText("waiting the opponent's turn.");}	
 						if(wt==TIME/5){stateText.setText("waiting the opponent's turn...");}	
 						if(wt==2*TIME/5){stateText.setText("waiting the opponent's turn.....");}	
 						if(wt==3*TIME/5){stateText.setText("waiting the opponent's turn.......");}	
 						if(wt==4*TIME/5){stateText.setText("waiting the opponent's turn.........");}	
+					}else if(isWait==2){
+						bou.setRotation(rot*1.91f);
+						rot++;
 					}
 				}		
 	});
@@ -392,6 +407,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
             });
     		stateText.setText(" YOU WIN !!!");
     		popupDialogue(" YOU WIN !");
+    		winsnd.play();
 		}else{//lose
             MainActivity.mHandler.post(new Runnable() {
                 @Override
@@ -457,30 +473,32 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	
 	
 	public void stoneHasamu(int gx, int gy){
-		
+
+		if(gy+3<=FIELD-1){
 		if(field[gx][gy]==field[gx][gy+3]&&field[gx][gy+1]==field[gx][gy+2]&&field[gx][gy+1]!=0&&field[gx][gy]!=field[gx][gy+1]){
 			removeStone(gx,gy+1);
 			removeStone(gx,gy+2);
-		}
+		}}
 		if(gy-3>=0){
 		if(field[gx][gy]==field[gx][gy-3]&&field[gx][gy-1]==field[gx][gy-2]&&field[gx][gy-1]!=0&&field[gx][gy]!=field[gx][gy-1]){
 			removeStone(gx,gy-1);
 			removeStone(gx,gy-2);
 		}}
+		if(gx+3<=FIELD-1){
 		if(field[gx][gy]==field[gx+3][gy]&&field[gx+1][gy]==field[gx+2][gy]&&field[gx+1][gy]!=0&&field[gx][gy]!=field[gx+1][gy]){
 			removeStone(gx+1,gy);
 			removeStone(gx+2,gy);
-		}
+		}}
 		if(gx-3>=0){
 		if(field[gx][gy]==field[gx-3][gy]&&field[gx-1][gy]==field[gx-2][gy]&&field[gx-1][gy]!=0&&field[gx][gy]!=field[gx-1][gy]){
 			removeStone(gx-1,gy);
 			removeStone(gx-2,gy);
 		}}
-		
+		if(gx+3<=FIELD-1&&gy+3<=FIELD-1){
 		if(field[gx][gy]==field[gx+3][gy+3]&&field[gx+1][gy+1]==field[gx+2][gy+2]&&field[gx+1][gy+1]!=0&&field[gx][gy]!=field[gx+1][gy+1]){
 			removeStone(gx+1,gy+1);
 			removeStone(gx+2,gy+2);
-		}
+		}}
 		if(gy-3>=0){
 		if(field[gx][gy]==field[gx+3][gy-3]&&field[gx+1][gy-1]==field[gx+2][gy-2]&&field[gx+1][gy-1]!=0&&field[gx][gy]!=field[gx+1][gy-1]){
 			removeStone(gx+1,gy-1);
@@ -496,7 +514,13 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			removeStone(gx-1,gy-1);
 			removeStone(gx-2,gy-2);
 		}}
-		
+
+		try {
+			Thread.sleep((long) 0.3f);
+		} catch (InterruptedException e) {
+			// TODO é©ìÆê∂ê¨Ç≥ÇÍÇΩ catch ÉuÉçÉbÉN
+			e.printStackTrace();
+		}
 	}
 	
 
@@ -514,12 +538,14 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	                public void onMessage(final String message) {
 	                    Log.d(TAG, "Message:" + message);
 	                    parseJson(message);
+	                    /*
 	                    MainActivity.mHandler.post(new Runnable() {
 	                        @Override
 	                        public void run() {
 	                            Toast.makeText(getBaseActivity(), message, Toast.LENGTH_SHORT).show();
 	                        }
 	                    });
+	                    */
 	                }
 	                @Override
 	                public void onError(Exception ex) {
