@@ -138,18 +138,18 @@ public class cpu {
 			}
 		}
 		
-		/*
+		
 		for(a=0;a<N;a++){
-			buff=0;k=N-1;l=N-1;b=N-1;
+			buff=0;k=0;l=0;b=N-1;
 			count=0;blocked=0;
 			for(;a+k>=0&&a+k<N&&b+l>=0&&b+l<N;){
 				if(buff==0&&field[a+k][b+l]!=0)count++;
 				if(buff!=0&&buff==field[a+k][b+l])count++;
 				if(buff!=0&&field[a+k][b+l]!=0&&buff!=field[a+k][b+l]){count=1;blocked=1;}
 				if(buff!=0&&field[a+k][b+l]==0){
-					if(count==4){utu(k,l,4);}
-					if(count==3&&blocked==0){utu(k,l,3);}
-					if(count==2){utu(k,l,2);}
+					if(count==4){utu(a+k,b+l,4);}
+					if(count==3&&blocked==0){utu(a+k,b+l,3);}
+					if(count==2){utu(a+k,b+l,2);}
 					count=0;blocked=0;
 				}
 				buff = field[a+k][b+l];
@@ -158,16 +158,16 @@ public class cpu {
 		}
 		
 		for(b=0;b<N;b++){
-			buff=0;k=N-1;l=N-1;a=N-1;
+			buff=0;k=0;l=0;a=N-1;
 			count=0;blocked=0;
 			for(;a+k>=0&&a+k<N&&b+l>=0&&b+l<N;){
 				if(buff==0&&field[a+k][b+l]!=0)count++;
 				if(buff!=0&&buff==field[a+k][b+l])count++;
 				if(buff!=0&&field[a+k][b+l]!=0&&buff!=field[a+k][b+l]){count=1;blocked=1;}
 				if(buff!=0&&field[a+k][b+l]==0){
-					if(count==4){utu(k,l,4);}
-					if(count==3&&blocked==0){utu(k,l,3);}
-					if(count==2){utu(k,l,2);}
+					if(count==4){utu(a+k,b+l,4);}
+					if(count==3&&blocked==0){utu(a+k,b+l,3);}
+					if(count==2){utu(a+k,b+l,2);}
 					count=0;blocked=0;
 				}
 				buff = field[a+k][b+l];
@@ -176,7 +176,7 @@ public class cpu {
 		}
 		
 
-		for(a=N-1;a>=0;a--){
+		for(a=0;a<N;a++){
 			buff=0;k=0;l=0;b=0;
 			count=0;blocked=0;
 			for(;a+k>=0&&a+k<N&&b+l>=0&&b+l<N;){
@@ -184,9 +184,9 @@ public class cpu {
 				if(buff!=0&&buff==field[a+k][b+l])count++;
 				if(buff!=0&&field[a+k][b+l]!=0&&buff!=field[a+k][b+l]){count=1;blocked=1;}
 				if(buff!=0&&field[a+k][b+l]==0){
-					if(count==4){utu(k,l,4);}
-					if(count==3&&blocked==0){utu(k,l,3);}
-					if(count==2){utu(k,l,2);}
+					if(count==4){utu(a+k,b+l,4);}
+					if(count==3&&blocked==0){utu(a+k,b+l,3);}
+					if(count==2){utu(a+k,b+l,2);}
 					count=0;blocked=0;
 				}
 				buff = field[a+k][b+l];
@@ -202,9 +202,9 @@ public class cpu {
 				if(buff!=0&&buff==field[a+k][b+l])count++;
 				if(buff!=0&&field[a+k][b+l]!=0&&buff!=field[a+k][b+l]){count=1;blocked=1;}
 				if(buff!=0&&field[a+k][b+l]==0){
-					if(count==4){utu(k,l,4);}
-					if(count==3&&blocked==0){utu(k,l,3);}
-					if(count==2){utu(k,l,2);}
+					if(count==4){utu(a+k,b+l,4);}
+					if(count==3&&blocked==0){utu(a+k,b+l,3);}
+					if(count==2){utu(a+k,b+l,2);}
 					count=0;blocked=0;
 				}
 				buff = field[a+k][b+l];
@@ -212,7 +212,7 @@ public class cpu {
 			}
 		}
 		
-		for(a=0;a<N;a--){
+		for(a=0;a<N;a++){
 			buff=0;k=0;l=0;b=N-1;
 			count=0;blocked=0;
 			for(;a+k>=0&&a+k<N&&b+l>=0&&b+l<N;){
@@ -220,9 +220,9 @@ public class cpu {
 				if(buff!=0&&buff==field[a+k][b+l])count++;
 				if(buff!=0&&field[a+k][b+l]!=0&&buff!=field[a+k][b+l]){count=1;blocked=1;}
 				if(buff!=0&&field[a+k][b+l]==0){
-					if(count==4){utu(k,l,4);}
-					if(count==3&&blocked==0){utu(k,l,3);}
-					if(count==2){utu(k,l,2);}
+					if(count==4){utu(a+k,b+l,4);}
+					if(count==3&&blocked==0){utu(a+k,b+l,3);}
+					if(count==2){utu(a+k,b+l,2);}
 					count=0;blocked=0;
 				}
 				buff = field[a+k][b+l];
@@ -238,16 +238,16 @@ public class cpu {
 				if(buff!=0&&buff==field[a+k][b+l])count++;
 				if(buff!=0&&field[a+k][b+l]!=0&&buff!=field[a+k][b+l]){count=1;blocked=1;}
 				if(buff!=0&&field[a+k][b+l]==0){
-					if(count==4){utu(k,l,4);}
-					if(count==3&&blocked==0){utu(k,l,3);}
-					if(count==2){utu(k,l,2);}
+					if(count==4){utu(a+k,b+l,4);}
+					if(count==3&&blocked==0){utu(a+k,b+l,3);}
+					if(count==2){utu(a+k,b+l,2);}
 					count=0;blocked=0;
 				}
 				buff = field[a+k][b+l];
 				k++;l--;
 			}
 		}
-		*/
+		
 
 		if(ans[0]!=-1&&ans[1]!=-1){
 			return ans;
