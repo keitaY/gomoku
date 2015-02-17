@@ -12,6 +12,7 @@ import org.andengine.engine.handler.timer.TimerHandler;
 import org.andengine.entity.modifier.FadeInModifier;
 import org.andengine.entity.modifier.MoveXModifier;
 import org.andengine.entity.modifier.MoveYModifier;
+import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.scene.IOnSceneTouchListener;
 import org.andengine.entity.scene.Scene;
 import org.andengine.entity.sprite.Sprite;
@@ -50,6 +51,9 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	Sprite backgauge;
 	Sprite back;
 	Sprite bou;
+	Sprite[] chip = new Sprite[20];
+	Sprite exitButton ;
+	Sprite newgameButton ;
 	private Sound goishisnd;
 	private Sound ishitorusnd;
 	private Sound startsnd;
@@ -61,7 +65,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	static int Ggridlen=40;
 	int Mybw=0;//sente(black)=0 gote(white)=1
 	int step=0;
-	int[][] field = new int[FIELD*9][FIELD*9];//noStone=0,black=1,white=2
+	int[][] field = new int[FIELD*2][FIELD*2];//noStone=0,black=1,white=2
 	int getStone=0;
 	int torareStone=0;
 	int connectionID;
@@ -74,6 +78,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	private Text timerText;
 	private Text ishiText;
 	private Text gameText;
+	boolean isCpuMode = true;
 	
     static public WebSocketClient mClient;
 	public MainScene(MultiSceneActivity baseActivity){
@@ -85,7 +90,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	public void init(){
 		isGamed=0;
 		goishi = new Sprite[300];
-		field = new int[FIELD*9][FIELD*9];
+		field = new int[FIELD*2][FIELD*2];
 		timerCounter=TIME;
 		step=0;
 		getStone=0;
@@ -94,12 +99,15 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		wt=0;
 		isWait=2;
 		//--------------------
-        connectToServer();
 		setOnSceneTouchListener(this);
 		//-------------------
 		prepareGraphics();
 		setBackground();
 		prepareText();
+		setButtonSprite();
+
+        if(!isCpuMode){connectToServer();}else{
+		cpuMode();}
 	}
 	
 	@Override
@@ -152,7 +160,10 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 				goishi[i]=getBaseActivity().getResourceUtil().getSprite("black_s.png");
 				goishi[i+1]=getBaseActivity().getResourceUtil().getSprite("white_s.png");
 		}
-		
+		for (int i=0;i<20;i++){
+			chip[i] = getBaseActivity().getResourceUtil().getSprite("chip.png");	
+			if(i<10){chip[i].setPosition(10,650-i*30);}else{chip[i].setPosition(450,210+(i-10)*30);}
+		}
 	}
 	
 	public void setBackground(){
@@ -166,6 +177,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		attachChild(gauge);
 		bou.setPosition(400,147);
 		attachChild(bou);
+		for (int i=0;i<20;i++){
+		attachChild(chip[i]);chip[i].setVisible(false);}
 	}
 	
 	public void prepareText(){
@@ -216,9 +229,15 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
                     	init();
                     }
                   })
-                .setNegativeButton("No", null)
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(
+                      DialogInterface dialog, int which) {  
+                		buttonEnable();
+                    }
+                  })
                 .show();
-            	
+
             }
         });
 	}
@@ -236,6 +255,29 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		}
 	}
 	
+
+	public void setButtonSprite(){
+		 exitButton = new Sprite(30, 150, (TextureRegion) getBaseActivity().getResourceUtil().getSprite("exit.jpg").getTextureRegion(), this.getBaseActivity().getVertexBufferObjectManager()){
+			   @Override
+			   public boolean onAreaTouched(final TouchEvent pSceneTouchEvent, final float pTouchAreaLocalX, final float pTouchAreaLocalY) {
+			    switch (pSceneTouchEvent.getAction()) {
+			    case TouchEvent.ACTION_DOWN:
+			    	getBaseActivity().finish();
+			        break;
+			    }
+			    return true;
+			   }
+			  };
+			  exitButton.setZIndex(0);
+			  attachChild(exitButton);
+			  exitButton.setVisible(false);
+	}
+	
+	public void buttonEnable(){
+		  registerTouchArea(exitButton);
+		  exitButton.setVisible(true);
+	}
+	
 	//-------------------------------------------------------------solveGrid
 	
 	public void solveGrid(float x, float y){
@@ -243,7 +285,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		int gy = (int)((y-Gpad-GshiftY)/Ggridlen);
 		Log.d("grid", "[" + gx+","+gy+"]");
 		if(gx>=0&&gy>=0&&gx<=12&&gy<=12&&field[gx][gy]==0){
-			sendStone(gx,gy);
+			if(!isCpuMode)sendStone(gx,gy);
 			setStone(gx,gy,Mybw);
 		}
 	}
@@ -278,11 +320,8 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			int bw = jsonObject.getInt("bw");
 			int id = jsonObject.getInt("id");
 			if(bw!=-1&&id!=connectionID&&id!=-1&&gx!=-2){
-
-		        Log.d("debug", "4");
 				setStone(gx,gy,bw);
 				timerCounter=TIME;
-		        Log.d("debug", "4");
 			}
 			if(bw==-1){//OnConnect
 				connectionID = id;
@@ -293,7 +332,6 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	                }
 	            });
 			}
-	        Log.d("debug", "4");
 			if(id==-1){//OnStartGame
 				startsnd.play();
 				Mybw=bw;
@@ -306,19 +344,14 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 				if(Mybw==0){//black is sente
 					touchEnable=1;isWait=1;}else{touchEnable=0;isWait=0;}
 			}
-	        Log.d("debug", "4");
 			if(gx==-2&&id!=connectionID){//resigned
 				Game(Mybw);
 				if(gameText.getText()=="")gameText.setText("the opponent has disconnected.");
 			}
-	        Log.d("debug", "4");
 		} catch (JSONException e) {
 			// TODO Ž©“®¶¬‚³‚ê‚½ catch ƒuƒƒbƒN
-	        Log.d("debug", "e");
 			e.printStackTrace();
 		}
-
-        Log.d("debug", "4");
 	}
 	
 	//----------------------------------------------------------------UX
@@ -333,8 +366,18 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 				 pregoishi=getBaseActivity().getResourceUtil().getSprite("white_s.png");
 			}
 			pregoishi.setPosition((float)(Gpad+(gx-0.5)*Ggridlen),(float)(GshiftY+Gpad+(gy-0.5)*Ggridlen));
+			pregoishi.setScale(2);
 			pregoishi.setAlpha(0.3f);
 			attachChild(pregoishi);
+		}
+	}
+	
+	public void setChip(){
+		for(int i=0;i<getStone&&i<10;i++){
+			chip[i].setVisible(true);
+		}
+		for(int i=0;i<torareStone&&i<10;i++){
+			chip[i+10].setVisible(true);
 		}
 	}
 	
@@ -345,6 +388,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		attachChild(goishi[step]);
 		goishi[step].registerEntityModifier(new FadeInModifier(0.3f));
 		stoneHasamu(gx,gy);
+		setChip();
 		step++;
 		if(bw!=Mybw){touchEnable=1;isWait=1;}else{touchEnable=0;isWait=0;}
 		if(checkGame(gx,gy)==1){
@@ -382,26 +426,21 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 			new ITimerCallback() {
 				public void onTimePassed(TimerHandler pTimerHandler) {
 
-			        Log.d("debug", "5");
 					if(isWait==1){
-
-				    Log.d("debug", "6");
 					wt=0;
 					stateText.setText("your turn.");
-			        Log.d("debug", "5");
 					if(timerCounter>0){timerCounter--;}
 					if(timerCounter>=0){gauge.setWidth(480 * timerCounter/TIME);}
 					if(timerCounter==0){
 						if(Mybw==0){Game(1);
 						}else{Game(0);}
-						sendStone(-2,-2);
+						if(!isCpuMode)sendStone(-2,-2);
 						}
 					}else if(isWait==0){
-				        Log.d("debug", "7");
 						bou.setRotation(wt*1.56f);
 						wt++;
 						if(wt==1){stateText.setText("waiting the opponent's turn.");}	
-						if(wt==TIME/5){stateText.setText("waiting the opponent's turn...");}	
+						if(wt==TIME/5){stateText.setText("waiting the opponent's turn...");callCpu();}	
 						if(wt==2*TIME/5){stateText.setText("waiting the opponent's turn.....");}	
 						if(wt==3*TIME/5){stateText.setText("waiting the opponent's turn.......");}	
 						if(wt==4*TIME/5){stateText.setText("waiting the opponent's turn.........");}	
@@ -415,7 +454,7 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 	//---------------------------------------------------------------gameAlgo
 	public void Game(int bw){
 		if(isGamed==0){isGamed=1;
-		mClient.close();
+		if(!isCpuMode)mClient.close();
 		if(bw==Mybw){//win
             MainActivity.mHandler.post(new Runnable() {
                 @Override
@@ -442,6 +481,21 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		}
 	}
 	
+	public void callCpu(){//--------------------------------------------------------------------------------------------------------
+		int [] ans = new int[2];
+		int cpubw;
+		if(Mybw==0){cpubw=1;}else{cpubw=0;}
+		cpu c = new cpu();
+		ans = c.cpu(field);
+		setStone(ans[0],ans[1],cpubw);
+		timerCounter=TIME;
+	}
+	public void cpuMode(){
+		Mybw=0;
+		connectionID=1;
+		if(Mybw==0){//black is sente
+			touchEnable=1;isWait=1;}else{touchEnable=0;isWait=0;}
+	}
 	public int checkGame(int gx, int gy){//find 5-lined stones
 		int i=0;
 		int count=0;
