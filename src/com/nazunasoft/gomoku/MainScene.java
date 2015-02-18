@@ -10,9 +10,6 @@ import org.andengine.audio.sound.SoundFactory;
 import org.andengine.engine.handler.timer.ITimerCallback;
 import org.andengine.engine.handler.timer.TimerHandler;
 import org.andengine.entity.modifier.FadeInModifier;
-import org.andengine.entity.modifier.MoveXModifier;
-import org.andengine.entity.modifier.MoveYModifier;
-import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.primitive.Rectangle;
 import org.andengine.entity.scene.IOnSceneTouchListener;
 import org.andengine.entity.scene.Scene;
@@ -40,8 +37,6 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.widget.Toast;
-
-
 
 public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
     private static final String TAG = "MainScene";
@@ -171,9 +166,9 @@ public class MainScene extends KeyListenScene implements IOnSceneTouchListener {
 		attachChild(back);
 		goban.setPosition(0,GshiftY);
 		attachChild(goban);
-		backgauge.setPosition(0,GshiftY+goban.getHeight()+35);
+		backgauge.setPosition(0,GshiftY+goban.getHeight()+37);
 		attachChild(backgauge);
-		gauge.setPosition(0,GshiftY+goban.getHeight()+35);
+		gauge.setPosition(0,GshiftY+goban.getHeight()+37);
 		attachChild(gauge);
 		bou.setPosition(400,147);
 		attachChild(bou);
